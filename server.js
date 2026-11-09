@@ -6,6 +6,7 @@ dns.setServers(["8.8.8.8", "8.8.4.4"]);
 const express = require("express");
 const mongoose = require("mongoose");
 const authorRoutes = require("./routes/authorRoutes");
+const bookRoutes = require("./routes/bookRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +14,7 @@ const PORT = process.env.PORT || 3000;
 // Allow Express to read JSON request bodies
 app.use(express.json());
 app.use("/authors", authorRoutes);
+app.use("/books", bookRoutes);
 
 // Health-check endpoint
 app.get("/", (req, res) => {

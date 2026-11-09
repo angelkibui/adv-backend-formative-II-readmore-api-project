@@ -1,4 +1,5 @@
 const Author = require("../models/Author");
+const Book = require("../models/Book");
 
 // Create a new author
 const createAuthor = async (req, res) => {
@@ -110,16 +111,73 @@ const updateAuthor = async (req, res) => {
   }
 };
 
-// Delete an author by ID
-const deleteAuthor = async (req, res) => {
+// Get statistics for an author's books
+const getAuthorStats = async (req, res) => {
   try {
-    const author = await Author.findByIdAndDelete(req.params.id);
+    const author = await Author.findById(req.params.id);
 
     if (!author) {
       return res.status(404).json({
         message: "Author not found",
       });
     }
+
+    const books = await Book.find({ author: author._id }).sort({
+      price: 1,
+    });
+
+    const bookCount = books.length;
+
+    const averagePrice =
+      bookCount === 0
+        ? 0
+        : books.reduce((total, book) => total + book.price, 0) / bookCount;
+
+    res.status(200).json({
+      author,
+      bookCount,
+      averagePrice: Number(averagePrice.toFixed(2)),
+      cheapestBook: bookCount > 0 ? books[0] : null,
+      mostExpensiveBook: bookCount > 0 ? books[bookCount - 1] : null,
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        message: "Invalid author ID",
+      });
+    }
+
+    res.status(500).json({
+      message: "Failed to retrieve author statistics",
+      error: error.message,
+    });
+  }
+};
+
+// Delete an author by ID
+const deleteAuthor = async (req, res) => {
+  try {
+    const author = await Author.findById(req.params.id);
+
+    if (!author) {
+      return res.status(404).json({
+        message: "Author not found",
+      });
+    }
+
+    // Check whether the author has any books
+    const existingBook = await Book.findOne({
+      author: author._id,
+    });
+
+    if (existingBook) {
+      return res.status(409).json({
+        message: "Cannot delete an author who has books. Delete or reassign their books first.",
+      });
+    }
+
+    // Delete the author only if they have no books
+    await Author.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       message: "Author deleted successfully",
@@ -145,4 +203,5 @@ module.exports = {
   getAuthorById,
   updateAuthor,
   deleteAuthor,
+  getAuthorStats,
 };
